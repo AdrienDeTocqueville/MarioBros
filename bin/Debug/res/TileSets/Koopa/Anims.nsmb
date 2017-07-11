@@ -1,0 +1,27 @@
+TileSetCount 2
+AnimCount 2
+
+TileSet L.png
+TileSet R.png
+
+Anim WalkLeft
+TileWidth 16
+TileHeight 32
+TileCount 8
+TileSet 0
+X 0
+Y 0
+Reverse 1
+Loop 1
+Duration 1000
+
+Anim WalkRight
+TileWidth 16
+TileHeight 32
+TileCount 8
+TileSet 1
+X 0
+Y 0
+Reverse 0
+Loop 1
+Duration 1000

@@ -1,0 +1,37 @@
+TileSetCount 1
+AnimCount 3
+
+TileSet TileSet.png
+
+Anim WalkLeft
+TileWidth 16
+TileHeight 16
+TileCount 8
+TileSet 0
+X 0
+Y 0
+Reverse 1
+Loop 1
+Duration 1000
+
+Anim WalkRight
+TileWidth 16
+TileHeight 16
+TileCount 8
+TileSet 0
+X 0
+Y 16
+Reverse 0
+Loop 1
+Duration 1000
+
+Anim Die
+TileWidth 22
+TileHeight 16
+TileCount 2
+TileSet 0
+X 0
+Y 32
+Reverse 0
+Loop 0
+Duration 200

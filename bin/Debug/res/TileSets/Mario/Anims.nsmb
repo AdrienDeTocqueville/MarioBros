@@ -1,0 +1,71 @@
+TileSetCount 2
+AnimCount 6
+
+TileSet L.png
+TileSet R.png
+
+Anim IdleLeft
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 0
+X 0
+Y 0
+Reverse 1
+Loop 1
+Duration 3000
+
+Anim IdleRight
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 1
+X 0
+Y 0
+Reverse 0
+Loop 1
+Duration 3000
+
+Anim WalkLeft
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 0
+X 0
+Y 35
+Reverse 1
+Loop 1
+Duration 1000
+
+Anim WalkRight
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 1
+X 0
+Y 35
+Reverse 0
+Loop 1
+Duration 1000
+
+Anim JumpLeft
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 0
+X 0
+Y 70
+Reverse 1
+Loop 1
+Duration 1000
+
+Anim JumpRight
+TileWidth 23
+TileHeight 35
+TileCount 24
+TileSet 1
+X 0
+Y 70
+Reverse 0
+Loop 1
+Duration 1000
