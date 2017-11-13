@@ -1,35 +1,27 @@
 #include "jeu.h"
 #include "Niveau.h"
 
+// TODO: tester nouvel affichage niveau
+// tester getInputs avec ennemis morts
 
 void jouer(unsigned world, std::string level)
 {
     sf::RenderWindow* ecran = Input::getWindow();
-    sf::RenderWindow inputsW(sf::VideoMode(NB_BLOC_LARGEUR*TAILLE_BLOC, NB_BLOC_HAUTEUR*TAILLE_BLOC), "Inputs");
-    inputsW.setPosition({0, 0});
-
-    sf::RectangleShape sh({TAILLE_BLOC, TAILLE_BLOC});
 
     Niveau niveau(1, "1.lvl");
     Joueur joueur(niveau.playerPosX, niveau.playerPosY, RIGHT);
 
     sf::Clock timer;
 
-    sf::Event events2;
-
     auto b = TextureManager::get(("res/Images/HUD/background.png"));
+
+    sf::RectangleShape sh({TAILLE_BLOC, 13});
     sf::Sprite background(*b);
     background.setPosition(0, ecran->getSize().y - 160);
 
 
     while (Input::isOpen())
     {
-        while (inputsW.pollEvent(events2))
-        {
-            if (events2.type == sf::Event::Closed)
-                return;
-        }
-
         /// BACK TO MENU
         if (Input::getKeyPressed(sf::Keyboard::Escape))
             return;
@@ -37,38 +29,11 @@ void jouer(unsigned world, std::string level)
         /// GENERATE NN INPUTS
         auto inputs = getInputs(joueur.getPosition(), niveau);
 
-        /// DRAW INPUTS
-        inputsW.clear(sf::Color::Blue);
-
-        for (unsigned i(0) ; i < NB_BLOC_LARGEUR ; i++)
-        {
-            sh.setPosition(i*TAILLE_BLOC, 0);
-
-            for (unsigned j(0) ; j < NB_BLOC_HAUTEUR ; j++)
-            {
-                if (inputs[i + j*NB_BLOC_LARGEUR] == -1)
-                    sh.setFillColor(sf::Color::Black);
-                else if (inputs[i + j*NB_BLOC_LARGEUR] == 0)
-                    sh.setFillColor(sf::Color(127, 127, 127));
-                else if (inputs[i + j*NB_BLOC_LARGEUR] == 1)
-                    sh.setFillColor(sf::Color::White);
-
-                inputsW.draw(sh);
-
-                sh.move(0, TAILLE_BLOC);
-            }
-        }
-
-        inputsW.display();
-
-
         /// Limite de 60 FPS
             auto elapsed = timer.getElapsedTime().asMilliseconds();
-            if (elapsed < 17) // 1 image toutes les 16.6 ms
+            if (elapsed < 16) // 1 image toutes les 16.6 ms
             {
-//                std::cout << elapsed << "   ";
-                sf::sleep(sf::milliseconds(17 - elapsed));
-//                std::cout << timer.getElapsedTime().asMilliseconds() << std::endl;
+                sf::sleep(sf::milliseconds(16 - elapsed));
                 continue;
             }
             timer.restart();
@@ -87,16 +52,35 @@ void jouer(unsigned world, std::string level)
         /// Draw
             ecran->clear(sf::Color(0, 204, 255));
 
+            /// DRAW GAME
             niveau.draw(ecran);
             joueur.draw();
 
             ecran->draw(background);
 //            HUD.draw();
 
+            /// DRAW INPUTS
+            for (unsigned i(0) ; i < NB_BLOC_LARGEUR ; i++)
+            {
+                sh.setPosition(i*TAILLE_BLOC, NB_BLOC_HAUTEUR*TAILLE_BLOC);
+
+                for (unsigned j(0) ; j < NB_BLOC_HAUTEUR ; j++)
+                {
+                    if (inputs[i + j*NB_BLOC_LARGEUR] == -1)
+                        sh.setFillColor(sf::Color::Black);
+                    else if (inputs[i + j*NB_BLOC_LARGEUR] == 0)
+                        sh.setFillColor(sf::Color(127, 127, 127));
+                    else if (inputs[i + j*NB_BLOC_LARGEUR] == 1)
+                        sh.setFillColor(sf::Color::White);
+
+                    ecran->draw(sh);
+
+                    sh.move(0, 13);
+                }
+            }
+
             ecran->display();
     }
-
-    inputsW.close();
 }
 
 
@@ -107,6 +91,8 @@ const float toc = 20.0f;
 float fitnessEvaluation(Network& net, bool& _stop)
 {
     sf::RenderWindow* ecran = Input::getWindow();
+
+    sf::RectangleShape sh({TAILLE_BLOC, 13});
 
     Niveau niveau(1, "1.lvl");
     Joueur joueur(niveau.playerPosX, niveau.playerPosY, RIGHT);
@@ -149,6 +135,26 @@ float fitnessEvaluation(Network& net, bool& _stop)
 
         /// Draw
             ecran->clear(sf::Color(0, 204, 255));
+
+            /// DRAW INPUTS
+            for (unsigned i(0) ; i < NB_BLOC_LARGEUR ; i++)
+            {
+                sh.setPosition(i*TAILLE_BLOC, NB_BLOC_HAUTEUR*TAILLE_BLOC);
+
+                for (unsigned j(0) ; j < NB_BLOC_HAUTEUR ; j++)
+                {
+                    if (inputs[i + j*NB_BLOC_LARGEUR] == -1)
+                        sh.setFillColor(sf::Color::Black);
+                    else if (inputs[i + j*NB_BLOC_LARGEUR] == 0)
+                        sh.setFillColor(sf::Color(127, 127, 127));
+                    else if (inputs[i + j*NB_BLOC_LARGEUR] == 1)
+                        sh.setFillColor(sf::Color::White);
+
+                    ecran->draw(sh);
+
+                    sh.move(0, 13);
+                }
+            }
 
             niveau.draw(ecran);
             joueur.draw();
@@ -193,7 +199,7 @@ float fitnessEvaluation(Network& net, bool& _stop)
     return -1.0f;
 }
 
-vector<float> getInputs(sf::Vector2f pos, const Niveau& niveau, bool addBias)
+vector<float> getInputs(sf::Vector2f pos, const Niveau& niveau)
 {
     vector<float> inputs(NB_BLOC_LARGEUR * NB_BLOC_HAUTEUR, 0);
 
@@ -220,6 +226,9 @@ vector<float> getInputs(sf::Vector2f pos, const Niveau& niveau, bool addBias)
 
     for (Personnage* p: niveau.personnages)
     {
+        if (p->dead)
+            continue;
+
         // Get bloc
         int i = (p->getPosition().x) / TAILLE_BLOC;
         int j = (p->getPosition().y) / TAILLE_BLOC;
@@ -234,9 +243,6 @@ vector<float> getInputs(sf::Vector2f pos, const Niveau& niveau, bool addBias)
             }
         }
     }
-
-    if (addBias)
-        inputs.push_back(1);
 
     return inputs;
 }

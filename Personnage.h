@@ -25,7 +25,7 @@ class Personnage
         sf::Vector2f getPosition();
 
         void respawn();
-        void damage();
+        void takeDamage();
 
 
 //    protected:

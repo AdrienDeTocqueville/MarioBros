@@ -14,7 +14,8 @@ class Joueur : public Personnage
 
 //    private:
 /// -----   ATTRIBUTS   -----
-        bool enSaut, canJump;
+        int enSaut;
+        bool canJump;
         unsigned jumpTime;
 
         int state;

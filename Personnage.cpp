@@ -58,7 +58,7 @@ void Personnage::respawn()
     position = spawnPosition;
 }
 
-void Personnage::damage()
+void Personnage::takeDamage()
 {
     if (dead)
         return;

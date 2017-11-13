@@ -32,10 +32,10 @@ class Genome
 {
     public:
         Genome();
-        ~Genome();
-
         Genome(const Genome& g); // Copy constructor
         Genome(const Genome& g1, const Genome& g2); // Crossover
+
+        ~Genome();
 
         void copyRates(const Genome& g);
 
@@ -52,7 +52,7 @@ class Genome
         void loadFromString(string& _genome);
 
 
-    unsigned maxNeuron, globalRank;
+    unsigned nextNeuron, globalRank;
     float fitness;
 
     vector<Gene> genes;

@@ -9,7 +9,7 @@
 class Pool
 {
     public:
-        Pool(unsigned _population, unsigned _inputSize, unsigned _outputSize);
+        Pool(unsigned _population, unsigned _inputSize, unsigned _outputSize); // _inputSize should not include bias
         Pool(unsigned _generation);
         ~Pool();
 
@@ -18,6 +18,8 @@ class Pool
 
         unsigned getCurrentOrganism();
         unsigned getInnovation();
+
+        Genome* getBestGenome();
 
         bool computeGenerationFitness(std::function< float(Network&, bool&) > _fitnessFunction);
 
@@ -36,7 +38,7 @@ class Pool
 
     static const unsigned maxStaleness;
 
-    vector<Species> species;
+    vector<Species*> species;
 
     unsigned population;
 
@@ -45,6 +47,7 @@ class Pool
 
     int currentGenome;
     unsigned currentSpecies;
+
     unsigned currentOrganism;
 
     float maxFitness;

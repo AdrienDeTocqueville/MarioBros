@@ -74,10 +74,21 @@ Genome Species::breedChild()
         auto g1 = genomes.begin();  advance(g1, randomInt(0, genomes.size()-1));
         auto g2 = genomes.begin();  advance(g2, randomInt(0, genomes.size()-1));
 
-		Genome child(*g1, *g2); // Perform crossover
+        if (g1->fitness > g2->fitness)
+        {
+            Genome child(*g1, *g2); // Perform crossover
 
-		child.mutate();
-		return child;
+            child.mutate();
+            return child;
+        }
+
+        else
+        {
+            Genome child(*g2, *g1); // Perform crossover
+
+            child.mutate();
+            return child;
+        }
     }
 	else
     {
@@ -104,7 +115,7 @@ void Species::cull(bool _cutToOne)
 {
     sort();
 
-    unsigned remaining = _cutToOne? 1: ceil(genomes.size() * 0.5f);
+    unsigned remaining = _cutToOne? 1: ceil(genomes.size() * 0.5);
 
     while (genomes.size() > remaining)
         genomes.pop_back();

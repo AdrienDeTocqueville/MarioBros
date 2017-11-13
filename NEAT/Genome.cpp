@@ -40,7 +40,8 @@ Gene::~Gene()
 Pool* Genome::pool = nullptr;
 
 Genome::Genome():
-    maxNeuron(0), globalRank(0),
+    nextNeuron(pool->inputSize+pool->outputSize),
+    globalRank(0),
     fitness(0.0f),
     weightMutationChance(0.25f),
     linkMutationChance(2.0f),
@@ -52,64 +53,41 @@ Genome::Genome():
     stepSize(0.1f)
 { }
 
-Genome::~Genome()
-{ }
-
 Genome::Genome(const Genome& g):
     Genome()
 {
     genes = g.genes;
-    maxNeuron = g.maxNeuron;
+    nextNeuron = g.nextNeuron;
 
     copyRates(g);
 }
 
+// g1 should always have higher fitness than g2
 Genome::Genome(const Genome& g1, const Genome& g2):
     Genome()
 {
-    map<unsigned, pair<int,int>> matchingGenes;
-        for (unsigned i(0) ; i < g1.genes.size() ; i++)
-        {
-            matchingGenes[g1.genes[i].innovation] = {i, -1};
-        }
+    map<unsigned, const Gene*> innovations2;
+    for (unsigned i(0) ; i < g2.genes.size() ; i++)
+        innovations2[g2.genes[i].innovation] = &(g2.genes[i]);
 
-        for (unsigned i(0) ; i < g2.genes.size() ; i++)
-        {
-            auto it = matchingGenes.find(g2.genes[i].innovation);
 
-            if (it == matchingGenes.end())
-                matchingGenes[g2.genes[i].innovation] = {-1, i};
-            else
-                it->second.second = i;
-        }
-
-    for (auto it(matchingGenes.begin()) ; it != matchingGenes.end() ; ++it)
+    for (unsigned i(0) ; i < g1.genes.size() ; i++)
     {
-        if (it->second.first == -1 || it->second.second == -1) // Disjoint genes
-        {
-            if (it->second.first != -1 && g1.fitness >= g2.fitness)
-                genes.push_back(g1.genes[it->second.first]);
+        auto gene2 = innovations2.find(g1.genes[i].innovation);
 
-            if (it->second.second != -1 && g2.fitness >= g1.fitness)
-                genes.push_back(g2.genes[it->second.second]);
-        }
-        else // Matching genes
-        {
-            // choose random parent
-            if (random() < 0.5f)
-                genes.push_back(g1.genes[it->second.first]);
-            else
-                genes.push_back(g2.genes[it->second.second]);
-        }
+        if (gene2 != innovations2.end() && random() < 0.5f && gene2->second->enabled)
+            genes.push_back(*gene2->second);
+        else
+            genes.push_back(g1.genes[i]);
     }
 
-	maxNeuron = max(g1.maxNeuron, g2.maxNeuron);
+	nextNeuron = max(g1.nextNeuron, g2.nextNeuron);
 
-	if (g1.fitness >= g2.fitness)
-        copyRates(g1);
-    else
-        copyRates(g2);
+    copyRates(g1);
 }
+
+Genome::~Genome()
+{ }
 
 void Genome::copyRates(const Genome& g)
 {
@@ -223,10 +201,10 @@ void Genome::nodeMutate()
 
     gene.enabled = false;
 
-    genes.emplace_back(gene.in, maxNeuron, 1.0f);
-    genes.emplace_back(maxNeuron, gene.out, gene.weight);
+    genes.emplace_back(gene.in, nextNeuron, 1.0f);
+    genes.emplace_back(nextNeuron, gene.out, gene.weight);
 
-    maxNeuron++;
+    nextNeuron++;
 }
 
 // Cette mutation passe dans l'etat _state une liaison qui etait dans l'autre etat
@@ -301,10 +279,11 @@ unsigned disjointGenes(const Genome& a, const Genome& b)
 
     unsigned disjointCount = 0;
     for (auto it(matchingGenes.begin()) ; it != matchingGenes.end() ; ++it)
-        if (it->second.first != true && it->second.second != true)
+        if (it->second.first == false || it->second.second == false)
             disjointCount++;
 
-    return disjointCount / std::max(a.genes.size(), b.genes.size());
+	return disjointCount / max(a.genes.size(), b.genes.size());
+//    return disjointCount;
 }
 
 float averageWeightDifference(const Genome& a, const Genome& b)
@@ -333,7 +312,7 @@ string Genome::saveToString()
 {
     string genome;
 
-    genome = toString(maxNeuron) + " " + toStringF(fitness) + " " + toString(genes.size()) + " " +
+    genome = toString(nextNeuron) + " " + toStringF(fitness) + " " + toString(genes.size()) + " " +
              toString(weightMutationChance) + " " + toString(linkMutationChance) + " " +
              toString(biasMutationChance) + " " + toString(nodeMutationChance) + " " +
              toString(enableMutationChance) + " " + toString(disableMutationChance);
@@ -353,7 +332,7 @@ void Genome::loadFromString(string& _genome)
     float weight;
     bool enabled;
 
-    ss >> maxNeuron >> fitness >> gs;
+    ss >> nextNeuron >> fitness >> gs;
     ss >> weightMutationChance >> linkMutationChance >> biasMutationChance;
     ss >> nodeMutationChance >> enableMutationChance >> disableMutationChance;
 

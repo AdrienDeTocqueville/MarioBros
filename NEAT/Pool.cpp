@@ -6,14 +6,14 @@
 #include <cstdlib>
 #include <fstream>
 
-const unsigned Pool::maxStaleness(15); //15
+const unsigned Pool::maxStaleness(15);
 
 Pool::Pool(unsigned _population, unsigned _inputSize, unsigned _outputSize):
     population(_population),
     generation(0), innovation(0),
     currentGenome(-1), currentSpecies(0), currentOrganism(0),
     maxFitness(0.0f),
-    inputSize(_inputSize), outputSize(_outputSize)
+    inputSize(_inputSize+1), outputSize(_outputSize)
 {
     srand(time(NULL));
 
@@ -22,7 +22,6 @@ Pool::Pool(unsigned _population, unsigned _inputSize, unsigned _outputSize):
     for (unsigned i(0) ; i < population ; i++)
     {
         Genome genome;
-        genome.maxNeuron = inputSize + outputSize;
         genome.mutate();
 
         addToSpecies(genome);
@@ -55,7 +54,7 @@ Pool::Pool(unsigned _generation):
     species.clear();
 
     for (unsigned i(0) ; i < speSize ; i++)
-        species.emplace_back(folder + "\\species" + toString(i) + ".genomes");
+        species.push_back( new Species(folder + "\\species" + toString(i) + ".genomes") );
 }
 
 void Pool::saveToFolder()
@@ -83,12 +82,15 @@ void Pool::saveToFolder()
 
 
     for (unsigned i(0) ; i < species.size() ; i++)
-        species[i].saveToFile(folder + "\\species" + toString(i) + ".genomes");
+        species[i]->saveToFile(folder + "\\species" + toString(i) + ".genomes");
 }
 
 Pool::~Pool()
 {
     Genome::pool = nullptr;
+
+    for (unsigned i(0) ; i < species.size() ; i++)
+        delete species[i];
 }
 
 unsigned Pool::getCurrentOrganism()
@@ -99,6 +101,26 @@ unsigned Pool::getCurrentOrganism()
 unsigned Pool::getInnovation()
 {
     return ++innovation;
+}
+
+Genome* Pool::getBestGenome()
+{
+    float maxFitness = 0.0f;
+    Genome* bestGenome = nullptr;
+
+    for (Species* s: species)
+    {
+        for (auto g(s->genomes.begin()) ; g != s->genomes.end() ; ++g)
+        {
+            if (g->fitness > maxFitness)
+            {
+                maxFitness = g->fitness;
+                bestGenome = &(*g);
+            }
+        }
+    }
+
+    return bestGenome;
 }
 
 bool Pool::computeGenerationFitness(std::function< float(Network&, bool&) > _fitnessFunction)
@@ -134,16 +156,16 @@ bool Pool::computeGenerationFitness(std::function< float(Network&, bool&) > _fit
 
 void Pool::addToSpecies(const Genome& _genome)
 {
-	for (Species& s: species)
+	for (Species* s: species)
     {
-        if (s.contains(_genome))
+        if (s->contains(_genome))
         {
-            s.addGenome(_genome);
+            s->addGenome(_genome);
             return;
         }
     }
 
-    species.emplace_back(_genome);
+    species.push_back( new Species(_genome) );
 }
 
 void Pool::buildNewGeneration(bool _saveToFolder)
@@ -157,38 +179,51 @@ void Pool::buildNewGeneration(bool _saveToFolder)
     std::cout << std::endl << "Creating generation: " << generation << std::endl;
 
     // Remove the worst half of the genomes from each species
-    for (Species& s: species)
-        s.cull(false);
+    std::cout << "Culling" << std::endl;
+    for (Species* s: species)
+        s->cull(false);
 
     // Remove the species that evolved in a "bad way"
+    std::cout << "Removing stale species" << std::endl;
 	removeStaleSpecies();
 
+    std::cout << "Assigning global rank" << std::endl;
 	assignGlobalRank();
-	for (Species& s: species)
-        s.computeAverageFitness();
 
+    std::cout << "Computing average fitness" << std::endl;
+	for (Species* s: species)
+        s->computeAverageFitness();
+
+    std::cout << "Removing weak species" << std::endl;
 	removeWeakSpecies();
 
+    std::cout << "Breeding children: ";
 	vector<Genome> children;
 	float sum = totalAverageFitness();
-	for (Species& s: species)
+	for (Species* s: species)
     {
-        unsigned breed = floor(s.averageFitness / sum * population) -1;
+        unsigned breed = floor(s->averageFitness / sum * population);
         for (unsigned i(0) ; i < breed ; i++)
-            children.push_back(s.breedChild());
+            children.push_back(s->breedChild());
     }
+
+    std::cout << children.size() << std::endl;
 
     // Keep the best genome of each species
-    for (Species& s: species)
-        s.cull(true);
+    std::cout << "Culling again" << std::endl;
+    for (Species* s: species)
+        s->cull(true);
 
+    std::cout << "Breeding children: ";
     while (children.size() + species.size() < population)
     {
-        Species& s = species[ randomInt(0, species.size()-1) ];
-        children.push_back(s.breedChild());
+        Species* s = species[ randomInt(0, species.size()-1) ];
+        children.push_back(s->breedChild());
     }
+    std::cout << children.size() << std::endl;
 
 	// Repopulate
+    std::cout << "Repopulating" << std::endl;
     for (const Genome& child: children)
         addToSpecies(child);
 
@@ -203,21 +238,22 @@ void Pool::assignGlobalRank()
         return a->fitness > b->fitness;
     };
 
-    set<Genome*, decltype(increasingFitness)> allGenomes(increasingFitness);
+    multiset<Genome*, decltype(increasingFitness)> allGenomes(increasingFitness);
 
-    for (Species& s: species)
+    for (Species* s: species)
     {
-        for (auto genome(s.genomes.begin()) ; genome != s.genomes.end() ; genome++)
+        for (auto genome(s->genomes.begin()) ; genome != s->genomes.end() ; genome++)
             allGenomes.insert(&*genome);
     }
 
-	unsigned index = 0;
+	unsigned index = allGenomes.size();
     for (auto genome(allGenomes.begin()) ; genome != allGenomes.end() ; genome++)
-        (*genome)->globalRank = index++;
+        (*genome)->globalRank = index--;
 
     Genome* best = *allGenomes.begin();
 
     std::cout << std::endl;
+    std::cout << "Population size: " << allGenomes.size() << std::endl;
     std::cout << "Best organism: " << best->saveToString() << std::endl;
     std::cout << "With fitness = " << best->fitness << std::endl << std::endl;
 }
@@ -228,24 +264,29 @@ void Pool::removeStaleSpecies()
 
     for (unsigned i(0) ; i < species.size() ; i++)
     {
-        Species& s = species[i];
+        Species* s = species[i];
 
-        s.sort();
+        s->sort();
 
-        if (s.genomes.front().fitness > s.topFitness)
+        if (s->genomes.front().fitness > s->topFitness)
         {
-			s.topFitness = s.genomes.front().fitness;
-			s.staleness = 0;
+			s->topFitness = s->genomes.front().fitness;
+			s->staleness = 0;
         }
         else
-            s.staleness++;
+            s->staleness++;
 
-        if (s.staleness >= maxStaleness && s.topFitness < maxFitness)
+        if (s->staleness == maxStaleness && s->topFitness < maxFitness)
             staleSpecies.push_back(i);
     }
 
+    std::cout << "Removed " << staleSpecies.size() << " stale species" << std::endl;
+
     for (int i(staleSpecies.size()-1) ; i >= 0 ; i--)
+    {
+        delete species[staleSpecies[i]];
         species.erase(species.begin() + staleSpecies[i]);
+    }
 }
 
 void Pool::removeWeakSpecies()
@@ -255,22 +296,27 @@ void Pool::removeWeakSpecies()
 	float sum = totalAverageFitness();
     for (unsigned i(0) ; i < species.size() ; i++)
     {
-        Species& s = species[i];
+        Species* s = species[i];
 
-		float breed = floor(s.averageFitness / sum * population);
-		if (breed >= 1.0f)
+		float breed = floor(s->averageFitness / sum * population);
+		if (breed < 1.0f)
 			weakSpecies.push_back(i);
     }
 
+    std::cout << "Removed " << weakSpecies.size() << " weak species" << std::endl;
+
     for (int i(weakSpecies.size()-1) ; i >= 0 ; i--)
+    {
+        delete species[weakSpecies[i]];
         species.erase(species.begin() + weakSpecies[i]);
+    }
 }
 
 float Pool::totalAverageFitness()
 {
     float total = 0.0f;
-    for (Species& s: species)
-        total += s.averageFitness;
+    for (Species* s: species)
+        total += s->averageFitness;
 
     return total;
 }
@@ -280,7 +326,7 @@ Genome* Pool::nextGenome()
     currentOrganism++;
     currentGenome++;
 
-    if ((unsigned)currentGenome == species[currentSpecies].genomes.size())
+    if ((unsigned)currentGenome == species[currentSpecies]->genomes.size())
     {
         currentGenome = 0;
         currentSpecies++;
@@ -289,7 +335,7 @@ Genome* Pool::nextGenome()
             return nullptr;
     }
 
-    auto g1 = species[currentSpecies].genomes.begin();  advance(g1, currentGenome);
+    auto g1 = species[currentSpecies]->genomes.begin();  advance(g1, currentGenome);
 
     return &(*g1);
 

@@ -27,7 +27,7 @@ float f(int x)
 /// Constructeur
 Joueur::Joueur(unsigned _x, unsigned _y, bool _orientation):
     Personnage(_x, _y, Type::MARIO, _orientation),
-    enSaut(false), canJump(true), jumpTime(0.0f),
+    enSaut(0), canJump(true), jumpTime(0.0f),
     state(IDLE)
 { blocSize = 2; }
 
@@ -47,6 +47,64 @@ void Joueur::update()
     /// Mort
     if (position.y/TAILLE_BLOC > niveau->height)
         dead = true;
+
+    /// Vertical
+    jumpTime += 17;
+
+    if (Input::getKeyDown(sf::Keyboard::Up))
+    {
+        if (canJump)
+        {
+            jumpTime = 0;
+            enSaut = 1;
+            canJump = false;
+        }
+        else if (jumpTime > 650)
+            enSaut = 2;
+    }
+    else if (jumpTime > 250)
+        enSaut = 2;
+
+    if (enSaut == 1)
+    {
+        position.y -= f(jumpTime);
+        state = JUMP;
+    }
+    else if (enSaut == 2)
+    {
+        position.y += 2.0f;
+        state = FALL;
+    }
+
+    /// Collisions
+    std::vector<Hit> hits = niveau->getHits(getAABB());
+
+    for (Hit& hit: hits)
+    {
+        if (!hit.sides)
+        {
+            if (hit.bloc->solid)
+            {
+                position.y = round(position.y/TAILLE_BLOC) * TAILLE_BLOC;
+
+                enSaut = 2*hit.top;
+                if (!hit.top)
+                    canJump = true;
+            }
+
+            if (hit.top)
+            {
+                if (hit.bloc->type == BLOC::MYSTERE)
+                    hit.bloc->setType(BLOC::VIDE);
+
+                else if (hit.bloc->type == BLOC::BRIQUE)
+                    hit.bloc->setType(BLOC::CIEL);
+
+                else if (hit.bloc->type == BLOC::BRIQUEVIDE)
+                    hit.bloc->setType(BLOC::VIDE);
+            }
+        }
+    }
 
     /// Horizontal
     if (Input::getKeyDown(sf::Keyboard::Left))
@@ -68,7 +126,7 @@ void Joueur::update()
     }
 
     /// Collisions
-    std::vector<Hit> hits = niveau->getHits(getAABB());
+    hits = niveau->getHits(getAABB());
 
     for (Hit& hit: hits)
     {
@@ -82,64 +140,6 @@ void Joueur::update()
             position.x = round(position.x/TAILLE_BLOC) * TAILLE_BLOC;
     }
 
-    /// Vertical
-    jumpTime += 17;
-
-    if (Input::getKeyDown(sf::Keyboard::Up))
-    {
-        if (canJump)
-        {
-            jumpTime = 0;
-            enSaut = true;
-            canJump = false;
-        }
-        else if (jumpTime > 650)
-            enSaut = false;
-    }
-    else if (jumpTime > 250)
-        enSaut = false;
-
-    if (enSaut)
-    {
-        position.y -= f(jumpTime);
-        state = JUMP;
-    }
-    else
-    {
-        position.y += 2.0f;
-        state = FALL;
-    }
-
-    /// Collisions
-    hits = niveau->getHits(getAABB());
-
-    for (Hit& hit: hits)
-    {
-        if (!hit.sides)
-        {
-            if (hit.bloc->solid)
-            {
-                position.y = round(position.y/TAILLE_BLOC) * TAILLE_BLOC;
-
-                enSaut = false;
-                if (!hit.top)
-                    canJump = true;
-            }
-
-            if (hit.top)
-            {
-                if (hit.bloc->type == BLOC::MYSTERE)
-                    hit.bloc->setType(BLOC::VIDE);
-
-                else if (hit.bloc->type == BLOC::BRIQUE)
-                    hit.bloc->setType(BLOC::CIEL);
-
-                else if (hit.bloc->type == BLOC::BRIQUEVIDE)
-                    hit.bloc->setType(BLOC::VIDE);
-            }
-        }
-    }
-
 
     /// Personnages
     sf::FloatRect aabb(getAABB()), intersection;
@@ -149,22 +149,54 @@ void Joueur::update()
         if (p->dead)
             continue;
 
-        if (aabb.intersects(p->getAABB(), intersection))
+        bool col = true, topcol = false;
+
+        float xRight = p->position.x - (position.x + TAILLE_BLOC);
+        float xLeft = position.x - (p->position.x + TAILLE_BLOC);
+        float yTop = position.y - (p->position.y + p->blocSize*TAILLE_BLOC);
+        float yBot = p->position.y - (position.y + blocSize*TAILLE_BLOC);
+
+        if (xLeft > 0.0f || xRight > 0.0f)
+            col = false;
+
+        if (yTop > 0.0f || yBot > 0.0f)
+            col = false;
+
+        if (yBot > -TAILLE_BLOC/2)
+            topcol = true;
+
+        if (col)
         {
-            if (intersection.width < intersection.height || // Sides
-                intersection.top == aabb.top)   // Top
+            if (topcol)
             {
-                damage();
-            }
-            else // Bottom
-            {
-                p->damage();
+                p->takeDamage();
 
                 jumpTime = 0;
-                enSaut = true;
+                enSaut = 1;
                 canJump = false;
             }
+            else
+            {
+                takeDamage();
+            }
         }
+
+//        if (aabb.intersects(p->getAABB(), intersection))
+//        {
+//            if (intersection.width < intersection.height || // Sides
+//                intersection.top == aabb.top)   // Top
+//            {
+//                takeDamage();
+//            }
+//            else // Bottom
+//            {
+//                p->takeDamage();
+//
+//                jumpTime = 0;
+//                enSaut = 1;
+//                canJump = false;
+//            }
+//        }
     }
 
     /// Move map

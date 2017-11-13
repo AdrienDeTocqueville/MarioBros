@@ -3,8 +3,8 @@
 
 #include "NEAT/Pool.h"
 
-void afficherMenu(sf::RenderWindow& ecran);
-void afficherSelecteur(sf::RenderWindow& ecran, int selection);
+void afficherIntro(sf::RenderWindow& ecran);
+void afficherMenu(sf::RenderWindow& ecran, int selection);
 
 int main(int argc, char *argv[])
 {
@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
         // Draw
             ecran.clear(sf::Color(0, 204, 255));
 
-            afficherMenu(ecran);
-            afficherSelecteur(ecran, selection);
+            afficherIntro(ecran);
+            afficherMenu(ecran, selection);
 
             ecran.display();
 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 
                     if (action == 1)
                     {
-                        pool = new Pool(300, NB_BLOC_HAUTEUR*NB_BLOC_LARGEUR +1, 3);
+                        pool = new Pool(300, NB_BLOC_HAUTEUR*NB_BLOC_LARGEUR, 3);
                     }
                     else
                     {
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-void afficherMenu(sf::RenderWindow& ecran)
+void afficherIntro(sf::RenderWindow& ecran)
 {
     /// Images
         static sf::Sprite logo   (*TextureManager::get("res/Images/Intro/logo.png"));
@@ -147,10 +147,10 @@ void afficherMenu(sf::RenderWindow& ecran)
 //        SDL_Write(ecran, (ecran->w - 24*8)/2, solHeight + TAILLE_BLOC, "BY ADRIEN DE TOCQUEVILLE", "font2", 8);
 }
 
-void afficherSelecteur(sf::RenderWindow& ecran, int selection)
+void afficherMenu(sf::RenderWindow& ecran, int selection)
 {
     /// Image
-        static sf::Sprite menu(*TextureManager::get("res/Images/Intro/menu.png"));
+        static sf::Sprite menu(*TextureManager::get("res/Images/HUD/menu.png"));
         static sf::Sprite background(*TextureManager::get("res/Images/HUD/background.png"));
 
     /// Positions

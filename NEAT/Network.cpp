@@ -84,8 +84,12 @@ Network::~Network()
 
 vector<float> Network::evaluate(vector<float> _input)
 {
-    vector<float> output(outputLayer.size());
+    vector<float> output(outputLayer.size(), -1.0f);
 
+    _input.push_back(1.0f); // bias
+
+    if (_input.size() != inputLayer.size())
+        std::cout << "input size invalid: " << _input.size() << " instead of " << inputLayer.size() << std::endl;
 
     for (unsigned i(0) ; i < inputLayer.size() ; i++)
     {
@@ -98,9 +102,7 @@ vector<float> Network::evaluate(vector<float> _input)
 
     for (unsigned i(0) ; i < outputLayer.size() ; i++)
     {
-        if (outputLayer[i] == nullptr)
-            output[i] = -1.0f;
-        else
+        if (outputLayer[i] != nullptr)
             output[i] = outputLayer[i]->compute();
     }
 
